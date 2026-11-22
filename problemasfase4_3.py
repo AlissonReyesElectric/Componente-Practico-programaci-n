@@ -1,0 +1,414 @@
+# ============================================================
+# PROYECTO: SOFTWARE FJ - BUSINESS MANAGER
+# UNIVERSIDAD: UNAD
+# CURSO: PROGRAMACION
+# LENGUAJE: PYTHON 3.13
+# INTERFAZ GRAFICA: CUSTOMTKINTER
+#
+# DESARROLLADORA: Alisson Reyes
+#
+# DESCRIPCION:
+# Aplicacion para gestionar clientes, servicios y reservas de la empresa Software FJ.
+#
+# Los datos se almacenan en listas internas.
+# No se utiliza ninguna base de datos.
+# ============================================================    
+
+import customtkinter as ctk
+import re
+from datetime import datetime
+from tkinter import messagebox
+
+class DatosInvalidosError(Exception):
+    """Excepcion personalizada para datos o acciones no validas."""
+    pass
+
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
+class SoftwareFJ(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("Software FJ | Business Manager")
+        self.geometry("1250x780")
+        self.minsize(1050, 680)
+        self.configure(fg_color="#101522")
+
+        self.clientes = []
+        self.servicios = []
+        self.reservas = []
+        self.historial = []
+
+        self.crear_menu()
+        self.crear_area_principal()
+        self.mostrar_dashboard()
+
+    # -------------------- MENU Y ESTRUCTURA --------------------
+    def crear_menu(self):
+        self.sidebar = ctk.CTkFrame(self, width=235, corner_radius=0, fg_color="#171F30")
+        self.sidebar.pack(side="left", fill="y")
+        self.sidebar.pack_propagate(False)
+
+        ctk.CTkLabel(self.sidebar, text="◆ SOFTWARE FJ", font=("Arial", 22, "bold"),
+                      text_color="#62A8FF").pack(pady=(35, 5))
+        ctk.CTkLabel(self.sidebar, text="BUSINESS MANAGER", font=("Arial", 10, "bold"),
+                      text_color="#8B98AD").pack(pady=(0, 35))
+
+        opciones = [
+            ("⌂   Dashboard", self.mostrar_dashboard),
+            ("♙   Clientes", self.mostrar_clientes),
+            ("▣   Servicios", self.mostrar_servicios),
+            ("▤   Reservas", self.mostrar_reservas),
+            ("◷   Historial", self.mostrar_historial),
+            ("⚙   Configuracion", self.mostrar_configuracion),
+        ]
+        for nombre, accion in opciones:
+            ctk.CTkButton(self.sidebar, text=nombre, height=45, anchor="w",
+                fg_color="transparent", hover_color="#273956", text_color="#DCE6F5",
+                font=("Arial", 14), corner_radius=8, command=accion).pack(fill="x", padx=15, pady=5)
+
+        firma = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        firma.pack(side="bottom", pady=25)
+        ctk.CTkLabel(firma, text="🐾  Ali", font=("Segoe UI", 16, "bold"),
+                      text_color="#62A8FF").pack(pady=(0, 4))
+        ctk.CTkLabel(firma, text="Software FJ © 2026", font=("Arial", 10),
+                      text_color="#8290A5").pack()
+
+    def crear_area_principal(self):
+        self.contenido = ctk.CTkFrame(self, fg_color="transparent")
+        self.contenido.pack(side="right", fill="both", expand=True, padx=30, pady=25)
+
+    def limpiar_contenido(self):
+        for widget in self.contenido.winfo_children():
+            widget.destroy()
+
+    def crear_encabezado(self, titulo, descripcion):
+        ctk.CTkLabel(self.contenido, text=titulo, font=("Arial", 30, "bold"),
+                      text_color="#FFFFFF").pack(anchor="w", pady=(5, 5))
+        ctk.CTkLabel(self.contenido, text=descripcion, font=("Arial", 13),
+                      text_color="#8B98AD").pack(anchor="w", pady=(0, 20))
+
+    def registrar_evento(self, texto):
+        momento = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.historial.append(f"{momento} | {texto}")
+
+    def crear_lista_scroll(self, parent):
+        marco = ctk.CTkScrollableFrame(parent, fg_color="transparent")
+        marco.pack(fill="both", expand=True, padx=10, pady=5)
+        return marco
+
+    # -------------------- DASHBOARD --------------------
+    def mostrar_dashboard(self):
+        self.limpiar_contenido()
+        self.crear_encabezado("Panel de control", "Resumen de la informacion registrada en Software FJ.")
+        datos = [
+            ("CLIENTES", len(self.clientes), "Usuarios registrados", "#3988F7"),
+            ("SERVICIOS", len(self.servicios), "Servicios disponibles", "#9B70F5"),
+            ("RESERVAS", len(self.reservas), "Reservas registradas", "#16B89A"),
+        ]
+        tarjetas = ctk.CTkFrame(self.contenido, fg_color="transparent")
+        tarjetas.pack(fill="x")
+        for nombre, valor, detalle, color in datos:
+            tarjeta = ctk.CTkFrame(tarjetas, fg_color="#1B2639", corner_radius=15)
+            tarjeta.pack(side="left", fill="both", expand=True, padx=8, pady=5)
+            ctk.CTkLabel(tarjeta, text=nombre, font=("Arial", 12, "bold"),
+                         text_color="#A8B6CB").pack(anchor="w", padx=20, pady=(20, 5))
+            ctk.CTkLabel(tarjeta, text=str(valor), font=("Arial", 34, "bold"),
+                         text_color=color).pack(anchor="w", padx=20)
+            ctk.CTkLabel(tarjeta, text=detalle, font=("Arial", 11),
+                         text_color="#8290A5").pack(anchor="w", padx=20, pady=(5, 20))
+
+        panel = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=15)
+        panel.pack(fill="both", expand=True, padx=8, pady=20)
+        ctk.CTkLabel(panel, text="Bienvenida a Software FJ", font=("Arial", 23, "bold"),
+                     text_color="#FFFFFF").pack(anchor="w", padx=25, pady=(30, 10))
+        ctk.CTkLabel(panel, text="Administra clientes, servicios y reservas desde un solo lugar.\n\n"
+                     "Selecciona una opcion del menu lateral para comenzar.",
+                     font=("Arial", 14), text_color="#A8B6CB", justify="left").pack(anchor="w", padx=25, pady=10)
+        ctk.CTkButton(panel, text="+ Registrar nuevo cliente", width=220, height=42,
+                       command=self.mostrar_clientes).pack(anchor="w", padx=25, pady=20)
+
+    # -------------------- CLIENTES --------------------
+    def mostrar_clientes(self):
+        self.limpiar_contenido()
+        self.crear_encabezado("Gestion de clientes", "Registra, consulta y administra clientes.")
+        form = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=15)
+        form.pack(fill="x", padx=8, pady=5)
+        ctk.CTkLabel(form, text="Registrar nuevo cliente", font=("Arial", 19, "bold")).pack(anchor="w", padx=20, pady=(15, 10))
+        self.entrada_nombre = ctk.CTkEntry(form, placeholder_text="Nombre completo", height=40, width=350)
+        self.entrada_correo = ctk.CTkEntry(form, placeholder_text="Correo electronico", height=40, width=350)
+        self.entrada_telefono = ctk.CTkEntry(form, placeholder_text="Telefono", height=40, width=350)
+        for campo in (self.entrada_nombre, self.entrada_correo, self.entrada_telefono):
+            campo.pack(anchor="w", padx=20, pady=6)
+        self.mensaje_cliente = ctk.CTkLabel(form, text="Completa los datos para registrar un cliente.", text_color="#8B98AD")
+        self.mensaje_cliente.pack(anchor="w", padx=20, pady=8)
+        ctk.CTkButton(form, text="Guardar cliente", height=40, command=self.registrar_cliente).pack(anchor="w", padx=20, pady=(5, 15))
+
+        panel = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=15)
+        panel.pack(fill="both", expand=True, padx=8, pady=12)
+        ctk.CTkLabel(panel, text="Clientes registrados", font=("Arial", 18, "bold")).pack(anchor="w", padx=20, pady=12)
+        self.lista_clientes = self.crear_lista_scroll(panel)
+        self.actualizar_lista_clientes()
+
+    def registrar_cliente(self):
+        try:
+            nombre = self.entrada_nombre.get().strip()
+            correo = self.entrada_correo.get().strip().lower()
+            telefono = self.entrada_telefono.get().strip()
+            if not nombre or not correo or not telefono:
+                raise DatosInvalidosError("Todos los campos son obligatorios.")
+            if not any(ch.isalpha() for ch in nombre):
+                raise DatosInvalidosError("El nombre debe contener letras.")
+            if not re.match(r"^[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}$", correo):
+                raise DatosInvalidosError("El correo electronico no tiene un formato valido.")
+            tel = telefono.replace(" ", "").replace("-", "")
+            if tel.startswith("+"): tel = tel[1:]
+            if not tel.isdigit() or not 7 <= len(tel) <= 15:
+                raise DatosInvalidosError("El telefono debe contener entre 7 y 15 digitos.")
+            if any(c["correo"] == correo for c in self.clientes):
+                raise DatosInvalidosError("Ya existe un cliente registrado con ese correo.")
+            nuevo = {"id": self.siguiente_id(self.clientes), "nombre": nombre, "correo": correo, "telefono": telefono}
+            self.clientes.append(nuevo)
+            self.registrar_evento(f"Cliente registrado: {nombre} ({correo})")
+            for campo in (self.entrada_nombre, self.entrada_correo, self.entrada_telefono): campo.delete(0, "end")
+            self.mensaje_cliente.configure(text="Cliente registrado correctamente.", text_color="#16B89A")
+            self.actualizar_lista_clientes()
+        except DatosInvalidosError as e:
+            self.mensaje_cliente.configure(text=str(e), text_color="#FF7777")
+            messagebox.showwarning("Validacion", str(e))
+        except Exception as e:
+            self.mensaje_cliente.configure(text="Ocurrio un error inesperado.", text_color="#FF7777")
+            self.registrar_evento(f"ERROR al registrar cliente: {e}")
+            messagebox.showerror("Error", f"No se pudo registrar el cliente.\\nDetalle: {e}")
+
+    def actualizar_lista_clientes(self):
+        for w in self.lista_clientes.winfo_children(): w.destroy()
+        if not self.clientes:
+            ctk.CTkLabel(self.lista_clientes, text="Todavia no hay clientes registrados.", text_color="#8290A5").pack(pady=20)
+            return
+        for c in self.clientes:
+            fila = ctk.CTkFrame(self.lista_clientes, fg_color="#27364D", corner_radius=10)
+            fila.pack(fill="x", padx=5, pady=5)
+            ctk.CTkLabel(fila, text=f"#{c['id']} | {c['nombre']}\\nCorreo: {c['correo']} | Telefono: {c['telefono']}",
+                         justify="left", anchor="w", text_color="#DCE6F5").pack(fill="x", padx=15, pady=12)
+
+    # -------------------- SERVICIOS --------------------
+    def mostrar_servicios(self):
+        self.limpiar_contenido()
+        self.crear_encabezado("Gestion de servicios", "Registra y consulta salas, equipos y asesorias.")
+        form = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=15)
+        form.pack(fill="x", padx=8, pady=5)
+        ctk.CTkLabel(form, text="Registrar servicio", font=("Arial", 19, "bold")).pack(anchor="w", padx=20, pady=(15, 10))
+
+        self.tipo_servicio = ctk.CTkOptionMenu(form, values=["Sala", "Equipo", "Asesoria"])
+        self.tipo_servicio.pack(anchor="w", padx=20, pady=6)
+        self.entrada_serv_nombre = ctk.CTkEntry(form, placeholder_text="Nombre del servicio", width=350, height=40)
+        self.entrada_serv_desc = ctk.CTkEntry(form, placeholder_text="Descripcion", width=350, height=40)
+        self.entrada_serv_precio = ctk.CTkEntry(form, placeholder_text="Precio (valor numerico)", width=350, height=40)
+        self.entrada_serv_cantidad = ctk.CTkEntry(form, placeholder_text="Capacidad / cantidad disponible", width=350, height=40)
+        self.entrada_serv_duracion = ctk.CTkEntry(form, placeholder_text="Duracion (horas, si aplica)", width=350, height=40)
+        for campo in (self.entrada_serv_nombre, self.entrada_serv_desc, self.entrada_serv_precio,
+                      self.entrada_serv_cantidad, self.entrada_serv_duracion):
+            campo.pack(anchor="w", padx=20, pady=6)
+        self.mensaje_servicio = ctk.CTkLabel(form, text="Los valores numericos deben ser mayores o iguales a cero.", text_color="#8B98AD")
+        self.mensaje_servicio.pack(anchor="w", padx=20, pady=8)
+        ctk.CTkButton(form, text="Guardar servicio", height=40, command=self.registrar_servicio).pack(anchor="w", padx=20, pady=(5, 15))
+
+        panel = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=15)
+        panel.pack(fill="both", expand=True, padx=8, pady=12)
+        ctk.CTkLabel(panel, text="Catalogo de servicios", font=("Arial", 18, "bold")).pack(anchor="w", padx=20, pady=12)
+        self.lista_servicios = self.crear_lista_scroll(panel)
+        self.actualizar_lista_servicios()
+
+    def registrar_servicio(self):
+        try:
+            tipo = self.tipo_servicio.get()
+            nombre = self.entrada_serv_nombre.get().strip()
+            descripcion = self.entrada_serv_desc.get().strip()
+            precio_txt = self.entrada_serv_precio.get().strip()
+            cantidad_txt = self.entrada_serv_cantidad.get().strip()
+            duracion_txt = self.entrada_serv_duracion.get().strip()
+            if not nombre or not descripcion or not precio_txt or not cantidad_txt:
+                raise DatosInvalidosError("Completa tipo, nombre, descripcion, precio y capacidad/cantidad.")
+            try:
+                precio = float(precio_txt)
+                cantidad = int(cantidad_txt)
+                duracion = float(duracion_txt) if duracion_txt else 1.0
+            except ValueError:
+                raise DatosInvalidosError("Precio, cantidad y duracion deben ser numericos.")
+            if precio < 0 or cantidad <= 0 or duracion <= 0:
+                raise DatosInvalidosError("Precio no negativo, cantidad y duracion mayores que cero.")
+            if any(s["tipo"] == tipo and s["nombre"].casefold() == nombre.casefold() for s in self.servicios):
+                raise DatosInvalidosError("Ya existe un servicio de esa categoria con ese nombre.")
+            nuevo = {"id": self.siguiente_id(self.servicios), "tipo": tipo, "nombre": nombre,
+                     "descripcion": descripcion, "precio": precio, "cantidad": cantidad, "duracion": duracion}
+            self.servicios.append(nuevo)
+            self.registrar_evento(f"Servicio registrado: {tipo} - {nombre}")
+            for campo in (self.entrada_serv_nombre, self.entrada_serv_desc, self.entrada_serv_precio,
+                          self.entrada_serv_cantidad, self.entrada_serv_duracion): campo.delete(0, "end")
+            self.mensaje_servicio.configure(text="Servicio registrado correctamente.", text_color="#16B89A")
+            self.actualizar_lista_servicios()
+        except DatosInvalidosError as e:
+            self.mensaje_servicio.configure(text=str(e), text_color="#FF7777")
+            messagebox.showwarning("Validacion", str(e))
+        except Exception as e:
+            self.registrar_evento(f"ERROR al registrar servicio: {e}")
+            messagebox.showerror("Error", f"No se pudo registrar el servicio.\\nDetalle: {e}")
+
+    def actualizar_lista_servicios(self):
+        for w in self.lista_servicios.winfo_children(): w.destroy()
+        if not self.servicios:
+            ctk.CTkLabel(self.lista_servicios, text="No hay servicios registrados.", text_color="#8290A5").pack(pady=20)
+            return
+        for s in self.servicios:
+            fila = ctk.CTkFrame(self.lista_servicios, fg_color="#27364D", corner_radius=10)
+            fila.pack(fill="x", padx=5, pady=5)
+            texto = (f"#{s['id']} | {s['tipo']} - {s['nombre']}\\n{s['descripcion']}\\n"
+                     f"Precio: ${s['precio']:,.0f} | Cantidad/capacidad: {s['cantidad']} | Duracion base: {s['duracion']} h")
+            ctk.CTkLabel(fila, text=texto, justify="left", anchor="w", text_color="#DCE6F5").pack(fill="x", padx=15, pady=12)
+
+    # -------------------- RESERVAS --------------------
+    def mostrar_reservas(self):
+        self.limpiar_contenido()
+        self.crear_encabezado("Gestion de reservas", "Crea, consulta, confirma y cancela reservas.")
+        if not self.clientes or not self.servicios:
+            aviso = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=12)
+            aviso.pack(fill="x", padx=8, pady=8)
+            ctk.CTkLabel(aviso, text="Para crear una reserva primero registra al menos un cliente y un servicio.",
+                          text_color="#F0C36D", font=("Arial", 14)).pack(padx=15, pady=20)
+        form = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=15)
+        form.pack(fill="x", padx=8, pady=5)
+        ctk.CTkLabel(form, text="Nueva reserva", font=("Arial", 19, "bold")).pack(anchor="w", padx=20, pady=(15, 10))
+
+        clientes_op = [f"{c['id']} - {c['nombre']}" for c in self.clientes] or ["No hay clientes"]
+        servicios_op = [f"{s['id']} - {s['tipo']}: {s['nombre']}" for s in self.servicios] or ["No hay servicios"]
+        self.res_cliente = ctk.CTkOptionMenu(form, values=clientes_op, width=350)
+        self.res_servicio = ctk.CTkOptionMenu(form, values=servicios_op, width=350)
+        self.res_fecha = ctk.CTkEntry(form, placeholder_text="Fecha (AAAA-MM-DD)", width=350, height=40)
+        self.res_hora = ctk.CTkEntry(form, placeholder_text="Hora (HH:MM, 24 horas)", width=350, height=40)
+        self.res_duracion = ctk.CTkEntry(form, placeholder_text="Duracion en horas", width=350, height=40)
+        for campo in (self.res_cliente, self.res_servicio, self.res_fecha, self.res_hora, self.res_duracion):
+            campo.pack(anchor="w", padx=20, pady=6)
+        self.mensaje_reserva = ctk.CTkLabel(form, text="El precio se calcula con el precio del servicio y la duracion.", text_color="#8B98AD")
+        self.mensaje_reserva.pack(anchor="w", padx=20, pady=8)
+        ctk.CTkButton(form, text="Crear reserva", height=40, command=self.registrar_reserva).pack(anchor="w", padx=20, pady=(5, 15))
+
+        panel = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=15)
+        panel.pack(fill="both", expand=True, padx=8, pady=12)
+        ctk.CTkLabel(panel, text="Reservas registradas", font=("Arial", 18, "bold")).pack(anchor="w", padx=20, pady=12)
+        self.lista_reservas = self.crear_lista_scroll(panel)
+        self.actualizar_lista_reservas()
+
+    def registrar_reserva(self):
+        try:
+            if not self.clientes or not self.servicios:
+                raise DatosInvalidosError("Registra clientes y servicios antes de crear reservas.")
+            seleccion_c = self.res_cliente.get()
+            seleccion_s = self.res_servicio.get()
+            cliente_id = int(seleccion_c.split(" - ")[0])
+            servicio_id = int(seleccion_s.split(" - ")[0])
+            cliente = next((c for c in self.clientes if c["id"] == cliente_id), None)
+            servicio = next((s for s in self.servicios if s["id"] == servicio_id), None)
+            if not cliente or not servicio:
+                raise DatosInvalidosError("Selecciona un cliente y servicio validos.")
+            fecha = self.res_fecha.get().strip()
+            hora = self.res_hora.get().strip()
+            try:
+                fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
+                hora_dt = datetime.strptime(hora, "%H:%M")
+                duracion = float(self.res_duracion.get().strip())
+            except ValueError:
+                raise DatosInvalidosError("Usa fecha AAAA-MM-DD, hora HH:MM y duracion numerica.")
+            if fecha_dt.date() < datetime.now().date():
+                raise DatosInvalidosError("No se pueden crear reservas para fechas pasadas.")
+            if duracion <= 0:
+                raise DatosInvalidosError("La duracion debe ser mayor que cero.")
+            inicio = datetime.combine(fecha_dt.date(), hora_dt.time())
+            fin = inicio.replace(minute=inicio.minute)  # se ajusta a continuacion
+            from datetime import timedelta
+            fin = inicio + timedelta(hours=duracion)
+            # Verifica cruce horario para el mismo servicio. Las canceladas no bloquean.
+            for r in self.reservas:
+                if r["servicio_id"] == servicio_id and r["estado"] != "Cancelada" and r["fecha"] == fecha:
+                    r_inicio = datetime.strptime(r["hora"], "%H:%M")
+                    anterior_inicio = datetime.combine(fecha_dt.date(), r_inicio.time())
+                    anterior_fin = anterior_inicio + timedelta(hours=r["duracion"])
+                    if inicio < anterior_fin and fin > anterior_inicio:
+                        raise DatosInvalidosError("Ese servicio ya tiene una reserva que se cruza con el horario seleccionado.")
+            precio_total = servicio["precio"] * duracion
+            reserva = {"id": self.siguiente_id(self.reservas), "cliente_id": cliente_id,
+                       "cliente": cliente["nombre"], "servicio_id": servicio_id,
+                       "servicio": servicio["nombre"], "tipo": servicio["tipo"],
+                       "fecha": fecha, "hora": hora, "duracion": duracion,
+                       "precio": precio_total, "estado": "Pendiente"}
+            self.reservas.append(reserva)
+            self.registrar_evento(f"Reserva #{reserva['id']} creada para {cliente['nombre']} - {servicio['nombre']}")
+            self.mensaje_reserva.configure(text=f"Reserva creada. Valor estimado: ${precio_total:,.0f}", text_color="#16B89A")
+            self.res_fecha.delete(0, "end"); self.res_hora.delete(0, "end"); self.res_duracion.delete(0, "end")
+            self.actualizar_lista_reservas()
+        except DatosInvalidosError as e:
+            self.mensaje_reserva.configure(text=str(e), text_color="#FF7777")
+            messagebox.showwarning("Validacion de reserva", str(e))
+        except Exception as e:
+            self.registrar_evento(f"ERROR al crear reserva: {e}")
+            messagebox.showerror("Error", f"No se pudo crear la reserva.\\nDetalle: {e}")
+
+    def actualizar_lista_reservas(self):
+        for w in self.lista_reservas.winfo_children(): w.destroy()
+        if not self.reservas:
+            ctk.CTkLabel(self.lista_reservas, text="Todavia no hay reservas registradas.", text_color="#8290A5").pack(pady=20)
+            return
+        for r in self.reservas:
+            fila = ctk.CTkFrame(self.lista_reservas, fg_color="#27364D", corner_radius=10)
+            fila.pack(fill="x", padx=5, pady=5)
+            info = (f"Reserva #{r['id']} | {r['estado']}\\nCliente: {r['cliente']} | Servicio: {r['tipo']} - {r['servicio']}\\n"
+                    f"Fecha: {r['fecha']} | Hora: {r['hora']} | Duracion: {r['duracion']} h | Total: ${r['precio']:,.0f}")
+            ctk.CTkLabel(fila, text=info, justify="left", anchor="w", text_color="#DCE6F5").pack(side="left", fill="x", expand=True, padx=15, pady=12)
+            acciones = ctk.CTkFrame(fila, fg_color="transparent")
+            acciones.pack(side="right", padx=8)
+            if r["estado"] == "Pendiente":
+                ctk.CTkButton(acciones, text="Confirmar", width=85, fg_color="#16866F",
+                              command=lambda rid=r["id"]: self.cambiar_estado_reserva(rid, "Confirmada")).pack(pady=3)
+            if r["estado"] != "Cancelada":
+                ctk.CTkButton(acciones, text="Cancelar", width=85, fg_color="#B84B58",
+                              command=lambda rid=r["id"]: self.cambiar_estado_reserva(rid, "Cancelada")).pack(pady=3)
+
+    def cambiar_estado_reserva(self, reserva_id, estado):
+        reserva = next((r for r in self.reservas if r["id"] == reserva_id), None)
+        if not reserva: return
+        if estado == "Cancelada" and not messagebox.askyesno("Confirmar cancelacion", "¿Deseas cancelar esta reserva?"):
+            return
+        reserva["estado"] = estado
+        self.registrar_evento(f"Reserva #{reserva_id} cambio a estado {estado}")
+        self.actualizar_lista_reservas()
+
+    # -------------------- HISTORIAL Y CONFIGURACION --------------------
+    def mostrar_historial(self):
+        self.limpiar_contenido()
+        self.crear_encabezado("Historial de operaciones", "Eventos generados durante la sesion actual.")
+        panel = ctk.CTkFrame(self.contenido, fg_color="#1B2639", corner_radius=15)
+        panel.pack(fill="both", expand=True, padx=8, pady=8)
+        lista = self.crear_lista_scroll(panel)
+        if not self.historial:
+            ctk.CTkLabel(lista, text="No hay eventos registrados aun.", text_color="#8290A5").pack(pady=20)
+        else:
+            for evento in reversed(self.historial):
+                ctk.CTkLabel(lista, text=evento, anchor="w", justify="left",
+                             text_color="#DCE6F5").pack(fill="x", padx=10, pady=5)
+
+    def mostrar_configuracion(self):
+        self.limpiar_contenido()
+        self.crear_encabezado("Configuracion", "Preferencias generales de Software FJ.")
+        ctk.CTkLabel(self.contenido, text="Tema visual: Modo oscuro\\nVersion: 1.0\\n\\n"
+                      "Los datos se mantienen en memoria durante la ejecucion.\\n"
+                      "No se utiliza una base de datos.",
+                      font=("Arial", 15), text_color="#A8B6CB", justify="left").pack(anchor="w", padx=15, pady=10)
+
+    @staticmethod
+    def siguiente_id(lista):
+        """Calcula un identificador que no se repite dentro de la lista."""
+        return max((elemento["id"] for elemento in lista), default=0) + 1
+
+if __name__ == "__main__":
+    app = SoftwareFJ()
+    app.mainloop()
